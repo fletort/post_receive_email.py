@@ -39,6 +39,7 @@ The script uses the following configuration variables:
 
     The available keys are: 
 
+        * ``%(repo_name)s``  - The repositoy name (directory).
         * ``%(prefix)s``  - The value of hooks.emailprefix.
         * ``%(ref_name)s`` - The ref name sent to post_receive 
           (eg. refs/heads/master)
@@ -48,7 +49,7 @@ The script uses the following configuration variables:
         * ``%(message)s`` - The first line of the commit message.
 
     The default subject template is 
-    ``%(prefix)s %(ref_name)s commit %(hash)s`` if one commit is being pushed
+    ``%(prefix)s [%(repo_name)s] %(ref_name)s commit %(hash)s`` if one commit is being pushed
     and ``%(prefix)s %(ref_name)s commit #%(index)s %(hash)s`` if more than
     one is being pushed.
 

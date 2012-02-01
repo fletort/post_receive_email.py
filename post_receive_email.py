@@ -6,6 +6,7 @@ import subprocess
 import sys
 import time
 import traceback
+import os
 from collections import defaultdict
 from email.mime.text import MIMEText
 from StringIO import StringIO
@@ -77,16 +78,33 @@ def get_commit_info(hash):
     for k in ['message', 'hash']:
         info[k] = s.readline().strip()
     return info
-
+    
+def git_get_repo_name():
+    pwd = os.getcwd()    
+    p = subprocess.Popen(['git', 'rev-parse', '--is-bare-repository'], stdout=subprocess.PIPE)
+    # Cut off the last \n character.
+    isbare = p.stdout.read()[:-1]
+    if isbare == "true":
+        repo_basename_tab = os.path.splitext(os.path.basename(pwd))
+        repo_basename = repo_basename_tab[0]
+    else:
+        p = subprocess.Popen(['git', 'rev-parse', '--git-dir'], stdout=subprocess.PIPE)
+        gitdir = p.stdout.read()[:-6]
+        repo_basename = os.path.basename(gitdir)
+        
+    return repo_basename
+    
 def process_commits(commits, mailer, subject_prefix, subject_template):
+    repo_name = git_get_repo_name()
     for ref_name in commits.keys():
         use_index = len(commits[ref_name]) > 1
         if not subject_template:
-            subject_template = ('%(prefix)s %(ref_name)s commit ' + 
+            subject_template = ('%(prefix)s [%(repo_name)s] %(ref_name)s commit ' + 
                                 ('(#%(index)s) ' if use_index else '') +
                                 '%(hash)s')
         for i, commit in enumerate(commits[ref_name]):
             info = get_commit_info(commit)
+            info['repo_name'] = repo_name
             info['ref_name'] = ref_name
             info['prefix'] = subject_prefix
             info['index'] = i + 1
