@@ -49,7 +49,7 @@ The script uses the following configuration variables:
         * ``%(message)s`` - The first line of the commit message.
 
     The default subject template is 
-    ``%(prefix)s [%(repo_name)s] %(ref_name)s commit %(hash)s`` if one commit is being pushed
+    ``%(prefix)s [%(repo_name)s] %(tag)s %(ref_name)s commit %(hash)s`` if one commit is being pushed
     and ``%(prefix)s %(ref_name)s commit #%(index)s %(hash)s`` if more than
     one is being pushed.
 

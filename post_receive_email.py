@@ -68,6 +68,13 @@ def git_rev_parse(hash, short=False):
     # Cut off the last \n character.
     return p.stdout.read()[:-1]
 
+def git_get_tag(hash):
+    p = subprocess.Popen(['git', 'describe', '--abbrev=0', '--candidates=0', '--tags', hash], 
+                         stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    # Cut off the last \n character.
+    s = p.stdout.read()[:-1]
+    return s
+
 def get_commit_info(hash):
     p = subprocess.Popen(['git', 'show', '--pretty=format:%s%n%h', '-s', hash], 
                          stdout=subprocess.PIPE)
@@ -78,6 +85,9 @@ def get_commit_info(hash):
     for k in ['message', 'hash']:
         info[k] = s.readline().strip()
     return info
+
+def get_branch_from_ref(ref):
+    return os.path.basename(ref)
     
 def git_get_repo_name():
     pwd = os.getcwd()    
@@ -99,7 +109,7 @@ def process_commits(commits, mailer, subject_prefix, subject_template):
     for ref_name in commits.keys():
         use_index = len(commits[ref_name]) > 1
         if not subject_template:
-            subject_template = ('%(prefix)s [%(repo_name)s] %(ref_name)s commit ' + 
+            subject_template = ('%(prefix)s [%(repo_name)s] %(tag)s %(ref_name)s commit ' + 
                                 ('(#%(index)s) ' if use_index else '') +
                                 '%(hash)s')
         for i, commit in enumerate(commits[ref_name]):
@@ -108,6 +118,7 @@ def process_commits(commits, mailer, subject_prefix, subject_template):
             info['ref_name'] = ref_name
             info['prefix'] = subject_prefix
             info['index'] = i + 1
+            info['tag'] = git_get_tag(commit)
             subject = subject_template % info
             message = git_show(commit)
             match = re.search(r'Author: (.+)', message)
@@ -117,7 +128,7 @@ def process_commits(commits, mailer, subject_prefix, subject_template):
             
 
 def get_commits(old_rev, new_rev):
-    p = subprocess.Popen(['git', 'log', '--pretty=format:%H', '--reverse',  
+    p = subprocess.Popen(['git', 'log', '--first-parent', '--pretty=format:%H', '--reverse',  
                           '%s..%s' % (old_rev, new_rev)], 
                          stdout=subprocess.PIPE)
     return p.stdout.read().split('\n')
@@ -130,7 +141,8 @@ def post_receive(mailer, subject_prefix, subject_template=None):
     commits = {}
     for line in lines:
         old_rev, new_rev, ref_name = parse_post_receive_line(line)
-        commits[ref_name] = get_commits(old_rev, new_rev)
+        if get_branch_from_ref(ref_name) == "master":
+           commits[ref_name] = get_commits(old_rev, new_rev)
     process_commits(commits, mailer, subject_prefix, subject_template)
 
 def get_config_variables():
